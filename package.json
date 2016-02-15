@@ -1,0 +1,27 @@
+{
+  "name": "AsyncHelper",
+  "version": "0.5.0",
+  "main": "AsyncHelper",
+  "keywords": [
+    "nodejs",
+    "async",
+    "dispatcher",
+    "condition",
+    "future",
+    "promise"
+  ],
+  "author": "ibon tolosana <hyperandroid@gmail.com>",
+  "description": "AsyncHelper is a general purpose library to work with asynchronous code in node js. It solves node's callback hell and offers a comprehensive approach to working with general asynchornous code like the use of Condition objects with timeout and code flow control (think of it as futures or promises) or a Dispatcher object.",
+  "repository": {
+    "type": "git",
+    "url": "git://github.com/hyperandroid/AsyncHelper.git"
+  },
+  "dependencies": {},
+  "devDependencies": {},
+  "optionalDependencies": {},
+  "engines": {
+    "node": "*"
+  },
+  "license": "MIT",
+  "homepage": "http://github.com/hyperandroid/AsyncHelper"
+}
