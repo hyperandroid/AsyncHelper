@@ -551,6 +551,7 @@ var Dispatcher = (function () {
     };
     return Dispatcher;
 })();
+exports.Dispatcher = Dispatcher;
 function __getSequenceStackTrace(_task, auditArguments, fnIndex) {
     function __stringify(v) {
         try {
