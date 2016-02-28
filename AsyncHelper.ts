@@ -39,12 +39,12 @@ function schedule( f : ()=>void, delay? : number ) {
  * Schedule each of the Array elements in the future.
  * Do not use directly, it is used internally by the library.
  */
-function forEachP( arr : any[] ) {
+function forEachP( arr : ParallelConditionDescriptor[] ) {
     arr.forEach( function( i : any ) {
         schedule(
-            (function(elem,index/*,array*/) {
+            (function(elem:ParallelConditionDescriptor,index:number/*,array*/) {
                 return function() {
-                    elem.fn(elem.condition, index);
+                    elem._fn(elem._condition, index);
                 }
             })(arr[i], i),
             0
@@ -53,7 +53,7 @@ function forEachP( arr : any[] ) {
 }
 
 
-export type SignalObserver = (...args)=>void;
+export type SignalObserver = (...args:any[])=>void;
 
 /**
  * Signal is a string-based observer substitution. Instead of registering events by (commonly) string,
@@ -139,7 +139,7 @@ export class Signal {
     /**
      * Notify all observers, either single/multi shot.
      */
-    emit( ...__arguments ) {
+    emit( ...__arguments : any[] ) {
 
         this._observers.forEach( function(e) {
             e.apply( e, Array.prototype.slice.call(__arguments) );
@@ -341,7 +341,7 @@ export class Condition {
                 callback(this);
             }, 0);
         } else {
-            (function(me, callback) {
+            (function(me : Condition, callback : SignalObserver) {
                 me._signalConditionStateChange.addListener( function( condition ) {
                     if (condition.isTrue()) {
                         callback( me );
@@ -364,7 +364,7 @@ export class Condition {
                 callback(this);
             }, 0);
         } else {
-            (function(me, callback) {
+            (function(me : Condition, callback : SignalObserver) {
                 me._signalConditionStateChange.addListener( function( condition ) {
                     if (condition.isFalse()) {
                         callback( me );
@@ -488,10 +488,10 @@ export class ConditionTree extends Condition {
      * @private
      */
     __isTrueOr() : BOOL_OPERATOR {
-        let i, l;
+        let i: number;
         let notSet= false;
 
-        for( i= 0, l=this._children.length; i<l; i++ ) {
+        for( i= 0; i<this._children.length; i++ ) {
             if ( this._children[i].isTrue() ) {
                 return BOOL_OPERATOR.TRUE;
             } else  if ( this._children[i].isNotSet() ) {
@@ -508,10 +508,9 @@ export class ConditionTree extends Condition {
      * @private
      */
     __isTrueAnd() : BOOL_OPERATOR {
-        let i, l;
         let notSet= false;
 
-        for( i= 0, l=this._children.length; i<l; i++ ) {
+        for( let i= 0; i<this._children.length; i++ ) {
             if ( this._children[i].isFalse() ) {
                 return BOOL_OPERATOR.FALSE;
             } else if ( this._children[i].isNotSet() ) {
@@ -527,7 +526,7 @@ export class ConditionTree extends Condition {
      * @private
      */
     __isTrue() {
-        let value;
+        let value : BOOL_OPERATOR;
 
         value= ( this._booleanOperator===BOOLEAN_OPERATOR.AND ) ?
             this.__isTrueAnd() :
@@ -566,7 +565,7 @@ export class ConditionTree extends Condition {
     }
 }
 
-class ParallelConditionDescriptor {
+export class ParallelConditionDescriptor {
     _condition : Condition;
     _fn : ParallelConditionElementFunction;
 
@@ -576,8 +575,8 @@ class ParallelConditionDescriptor {
     }
 }
 
-type ParallelConditionElementFunction = (c:Condition, index:number)=>void;
-type ParallelConditionElement = ParallelConditionElementFunction | ParallelCondition;
+export type ParallelConditionElementFunction = (c:Condition, index:number)=>void;
+export type ParallelConditionElement = ParallelConditionElementFunction | ParallelCondition;
 
 /**
  *
@@ -595,7 +594,7 @@ type ParallelConditionElement = ParallelConditionElementFunction | ParallelCondi
  */
 export class ParallelCondition extends ConditionTree {
 
-    _iterableArray : ParallelConditionElement[];
+    _iterableArray : ParallelConditionDescriptor[];
     _timeout : number;
 
     constructor( array : ParallelConditionElement[], timeout? : number ) {
@@ -612,7 +611,7 @@ export class ParallelCondition extends ConditionTree {
     __setIterableArray( array : ParallelConditionElement[] ) {
 
         const me= this;
-        const iterableArray= [];
+        const iterableArray:ParallelConditionDescriptor[]= [];
 
         if (array.constructor!==Array ) {
             throw "ParallelCondition needs an Array of functions or other ParallelConditions.";
@@ -620,7 +619,7 @@ export class ParallelCondition extends ConditionTree {
 
         array.forEach( function( element : ParallelConditionElement ) {
 
-            var condition;
+            var condition : Condition;
 
             if (typeof element === "function") {
                 condition= new Condition();
@@ -794,7 +793,7 @@ export class WorkerTask {
 
 let __workerIndex= 0;
 
-type WorkerCallback = ( c : Condition ) => void;
+export type WorkerCallback = ( c : Condition ) => void;
 
 /**
  * A Worker is the heart of Dispatcher and Pool objects.
@@ -829,9 +828,9 @@ export class Worker {
         this._workingCondition.setTrue();
 
         // schedule
-        (function(me, future, timeout) {
+        (function(me:Worker, future:Future, timeout:number) {
 
-            var timeoutId= null;
+            var timeoutId:number= null;
 
             setTimeout( function() {
                 // cambia la condicion de working cuando se establece valor al Future
@@ -937,7 +936,13 @@ function __createWorker( dispatcher : Dispatcher ) : Worker {
     return worker;
 }
 
+type GenericFunction = (...args:any[])=>any;
 type DispatcherCallback = (d:Dispatcher)=>void;
+
+interface AuditArgument {
+    args : any[];
+    ret : any;
+}
 
 /**
  * A Dispatcher object sequences the execution of tasks. Internally allocates a predefined number of
@@ -962,7 +967,7 @@ class Dispatcher {
     _pendingTasks : WorkerTask[];
     _isEmptySignal : Signal;
 
-    constructor( concurrency ) {
+    constructor( concurrency : number ) {
 
         this._concurrency = concurrency || 1;
         this._workers = __createWorkers(this, this._concurrency);
@@ -974,11 +979,11 @@ class Dispatcher {
     /**
      * Submit a task for asynchronous execution.
      *
-     * @param _task { FutureCallback }
+     * @param _task { GenericFunction }
      * @param _timeout {number=} millisecond to consider this task timed out.
      * @return {Future}
      */
-    submit( _task : FutureCallback, _timeout : number ) : Future {
+    submit( _task : GenericFunction, _timeout : number ) : Future {
 
         var task= new WorkerTask( _task, _timeout );
         this._pendingTasks.push( task );
@@ -987,13 +992,13 @@ class Dispatcher {
         return task.getFuture();
     }
 
-    submitNodeSequence( __task : FutureCallback | FutureCallback[], _timeout : number, haltOnError? : boolean ) {
+    submitNodeSequence( __task : GenericFunction | GenericFunction[], _timeout : number, haltOnError? : boolean ) : Future {
 
         if (typeof haltOnError==='undefined') {
             haltOnError= true;
         }
 
-        var task;
+        var task : GenericFunction;
 
         if ( Object.prototype.toString.call( __task ) === '[object Array]' ) {
 
@@ -1010,17 +1015,17 @@ class Dispatcher {
                 task= function(future) {
 
                     const pendingTasks= Array.prototype.slice.call( _task );
-                    let fnIndex= 0;
-                    const auditArguments= [];
+                    let fnIndex : number= 0;
+                    const auditArguments:AuditArgument[]= [];
 
-                    function iterate(...args) {
+                    function iterate(...args : any[]) {
 
                         const fn= pendingTasks.shift();
-                        let retValue;
+                        let retValue : any;
 
                         fnIndex+=1;
 
-                        var auditArgument= {
+                        var auditArgument : AuditArgument= {
                             args : Array.prototype.slice.call(arguments),
                             ret : undefined
                         };
@@ -1147,9 +1152,9 @@ class Dispatcher {
  *
  * @return {string}
  */
-function __getSequenceStackTrace( _task, auditArguments, fnIndex ) {
+function __getSequenceStackTrace( _task:FutureCallback[], auditArguments:AuditArgument[], fnIndex:number ) {
 
-    function __stringify( v ) {
+    function __stringify( v : any ) {
         try {
             return JSON.stringify( v );
         } catch(e1) {
@@ -1157,9 +1162,9 @@ function __getSequenceStackTrace( _task, auditArguments, fnIndex ) {
         }
     }
 
-    function __args( args ) {
+    function __args( ...args : any[] ) {
         str= 'args=[';
-        for( j=0; j<args.length; j++ ) {
+        for( let j=0; j<args.length; j++ ) {
             str+= __stringify(args[j]);
             if ( j<args.length-1 ) {
                 str+= ',';
@@ -1171,13 +1176,10 @@ function __getSequenceStackTrace( _task, auditArguments, fnIndex ) {
     }
 
     var str= '';
-    var fnStr;
-    var strtmp;
-    var args;
-    var i;
-    var j;
-    var auditArgument;
-    for( i=0; i<_task.length; i++ ) {
+    let fnStr : string;
+    let strtmp : string;
+    var auditArgument : AuditArgument;
+    for( let i=0; i<_task.length; i++ ) {
 
         auditArgument= i<auditArguments.length ? auditArguments[i] : null;
 

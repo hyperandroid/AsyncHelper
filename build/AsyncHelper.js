@@ -15,7 +15,7 @@ function forEachP(arr) {
     arr.forEach(function (i) {
         schedule((function (elem, index) {
             return function () {
-                elem.fn(elem.condition, index);
+                elem._fn(elem._condition, index);
             };
         })(arr[i], i), 0);
     });
@@ -211,9 +211,9 @@ var ConditionTree = (function (_super) {
         return this;
     };
     ConditionTree.prototype.__isTrueOr = function () {
-        var i, l;
+        var i;
         var notSet = false;
-        for (i = 0, l = this._children.length; i < l; i++) {
+        for (i = 0; i < this._children.length; i++) {
             if (this._children[i].isTrue()) {
                 return BOOL_OPERATOR.TRUE;
             }
@@ -224,9 +224,8 @@ var ConditionTree = (function (_super) {
         return notSet ? BOOL_OPERATOR.NOT_SET : BOOL_OPERATOR.FALSE;
     };
     ConditionTree.prototype.__isTrueAnd = function () {
-        var i, l;
         var notSet = false;
-        for (i = 0, l = this._children.length; i < l; i++) {
+        for (var i = 0; i < this._children.length; i++) {
             if (this._children[i].isFalse()) {
                 return BOOL_OPERATOR.FALSE;
             }
@@ -272,6 +271,7 @@ var ParallelConditionDescriptor = (function () {
     }
     return ParallelConditionDescriptor;
 })();
+exports.ParallelConditionDescriptor = ParallelConditionDescriptor;
 var ParallelCondition = (function (_super) {
     __extends(ParallelCondition, _super);
     function ParallelCondition(array, timeout) {
@@ -560,9 +560,13 @@ function __getSequenceStackTrace(_task, auditArguments, fnIndex) {
             return v.toString();
         }
     }
-    function __args(args) {
+    function __args() {
+        var args = [];
+        for (var _i = 0; _i < arguments.length; _i++) {
+            args[_i - 0] = arguments[_i];
+        }
         str = 'args=[';
-        for (j = 0; j < args.length; j++) {
+        for (var j = 0; j < args.length; j++) {
             str += __stringify(args[j]);
             if (j < args.length - 1) {
                 str += ',';
@@ -574,11 +578,8 @@ function __getSequenceStackTrace(_task, auditArguments, fnIndex) {
     var str = '';
     var fnStr;
     var strtmp;
-    var args;
-    var i;
-    var j;
     var auditArgument;
-    for (i = 0; i < _task.length; i++) {
+    for (var i = 0; i < _task.length; i++) {
         auditArgument = i < auditArguments.length ? auditArguments[i] : null;
         fnStr = _task[i].toString();
         strtmp = fnStr.substring(0, fnStr.indexOf('{'));

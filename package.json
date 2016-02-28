@@ -1,6 +1,6 @@
 {
-  "name": "AsyncHelper",
-  "version": "0.5.0",
+  "name": "asynchelper",
+  "version": "0.5.1",
   "main": "AsyncHelper",
   "keywords": [
     "nodejs",
@@ -19,6 +19,7 @@
   "dependencies": {},
   "devDependencies": {},
   "optionalDependencies": {},
+  "typings" : "AsyncHelper.d.ts",
   "engines": {
     "node": "*"
   },
