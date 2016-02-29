@@ -269,12 +269,14 @@
          * @return {*}
          */
         setTrue() {
-            if (this._b_condition === BOOL_OPERATOR.NOT_SET) {
 
-                this.__cancelTimer();
-                this._b_condition = BOOL_OPERATOR.TRUE;
-                this.__emit();
+            if ( this._b_condition===BOOL_OPERATOR.TRUE ) {
+                return this;
             }
+
+            this.__cancelTimer();
+            this._b_condition = BOOL_OPERATOR.TRUE;
+            this.__emit();
 
             return this;
         }
@@ -287,11 +289,13 @@
          * @return {*}
          */
         setFalse() {
-            if (this._b_condition === BOOL_OPERATOR.NOT_SET) {
-                this.__cancelTimer();
-                this._b_condition = BOOL_OPERATOR.FALSE;
-                this.__emit();
+            if ( this._b_condition===BOOL_OPERATOR.FALSE ) {
+                return this;
             }
+
+            this.__cancelTimer();
+            this._b_condition = BOOL_OPERATOR.FALSE;
+            this.__emit();
 
             return this;
         }
@@ -439,6 +443,20 @@
             if (error) {
                 this.onFalse(error);
             }
+        }
+
+        reset() {
+            this.setNotSet();
+            return this;
+        }
+
+        setNotSet() {
+            var prev= this._b_condition;
+            this._b_condition = BOOL_OPERATOR.NOT_SET;
+            if ( prev!==BOOL_OPERATOR.NOT_SET ) {
+                this.__emit();
+            }
+            return this;
         }
     }
 

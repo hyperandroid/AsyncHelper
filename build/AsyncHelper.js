@@ -97,19 +97,21 @@ var Condition = (function () {
         this._signalConditionStateChange.emit(this);
     };
     Condition.prototype.setTrue = function () {
-        if (this._b_condition === BOOL_OPERATOR.NOT_SET) {
-            this.__cancelTimer();
-            this._b_condition = BOOL_OPERATOR.TRUE;
-            this.__emit();
+        if (this._b_condition === BOOL_OPERATOR.TRUE) {
+            return this;
         }
+        this.__cancelTimer();
+        this._b_condition = BOOL_OPERATOR.TRUE;
+        this.__emit();
         return this;
     };
     Condition.prototype.setFalse = function () {
-        if (this._b_condition === BOOL_OPERATOR.NOT_SET) {
-            this.__cancelTimer();
-            this._b_condition = BOOL_OPERATOR.FALSE;
-            this.__emit();
+        if (this._b_condition === BOOL_OPERATOR.FALSE) {
+            return this;
         }
+        this.__cancelTimer();
+        this._b_condition = BOOL_OPERATOR.FALSE;
+        this.__emit();
         return this;
     };
     Condition.prototype.isTrue = function () {
@@ -190,6 +192,18 @@ var Condition = (function () {
         if (error) {
             this.onFalse(error);
         }
+    };
+    Condition.prototype.reset = function () {
+        this.setNotSet();
+        return this;
+    };
+    Condition.prototype.setNotSet = function () {
+        var prev = this._b_condition;
+        this._b_condition = BOOL_OPERATOR.NOT_SET;
+        if (prev !== BOOL_OPERATOR.NOT_SET) {
+            this.__emit();
+        }
+        return this;
     };
     return Condition;
 })();
