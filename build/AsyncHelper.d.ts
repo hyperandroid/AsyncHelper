@@ -40,6 +40,8 @@ export declare class Condition {
     disable(): void;
     getCurrentValue(): BOOL_OPERATOR;
     then(success: SignalObserver, error?: SignalObserver): void;
+    reset(): this;
+    setNotSet(): this;
 }
 export declare enum BOOLEAN_OPERATOR {
     AND = 0,
@@ -103,4 +105,20 @@ export declare class Worker {
     onWorkDone(f: WorkerCallback): this;
     onTimeout(f: WorkerCallback): this;
     kill(): void;
+}
+export declare type GenericFunction = (...args: any[]) => any;
+export declare type DispatcherCallback = (d: Dispatcher) => void;
+export declare class Dispatcher {
+    _concurrency: number;
+    _workers: Worker[];
+    _pendingTasks: WorkerTask[];
+    _isEmptySignal: Signal;
+    constructor(concurrency: number);
+    submit(_task: GenericFunction, _timeout: number): Future;
+    submitNodeSequence(__task: GenericFunction | GenericFunction[], _timeout: number, haltOnError?: boolean): Future;
+    submitCondition(_condition: ParallelCondition, _timeout: number): Future;
+    addIsEmptyListener(l: DispatcherCallback): this;
+    __executeTask(): void;
+    __workerNotBusy(worker: Worker): void;
+    __workerTimedOut(worker: Worker): void;
 }

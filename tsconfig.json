@@ -1,4 +1,7 @@
 {
+  "exclude": [
+    "node_modules"
+  ],
   "compilerOptions": {
     "target": "es5",
     "outDir": "build/",
@@ -7,9 +10,5 @@
     "noImplicitAny": true,
     "removeComments": true,
     "sourceMap": true
-  },
-  "exclude": [
-    "node_modules","build"
-  ]
+  }
 }
-

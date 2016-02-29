@@ -954,8 +954,8 @@
         return worker;
     }
 
-    type GenericFunction = (...args:any[])=>any;
-    type DispatcherCallback = (d:Dispatcher)=>void;
+    export type GenericFunction = (...args:any[])=>any;
+    export type DispatcherCallback = (d:Dispatcher)=>void;
 
     interface AuditArgument {
         args : any[];
