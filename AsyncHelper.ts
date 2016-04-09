@@ -862,9 +862,13 @@
 
                     workerTask.getTask()(future);
 
+                    if ( timeoutId ) {
+                        clearTimeout( timeoutId );
+                    }
+
                 }, 0);
 
-                if (timeout) {
+                if (timeout>0) {
                     timeoutId = setTimeout(function () {
                         me._timeoutCondition.setTrue();
                         timeoutId = null;

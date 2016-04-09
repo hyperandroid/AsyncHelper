@@ -1,6 +1,6 @@
 {
   "exclude": [
-    "node_modules"
+    "node_modules","build"
   ],
   "compilerOptions": {
     "target": "es5",

@@ -1,3 +1,4 @@
+"use strict";
 var __extends = (this && this.__extends) || function (d, b) {
     for (var p in b) if (b.hasOwnProperty(p)) d[p] = b[p];
     function __() { this.constructor = d; }
@@ -66,7 +67,7 @@ var Signal = (function () {
         this._observersOnce = [];
     };
     return Signal;
-})();
+}());
 exports.Signal = Signal;
 (function (BOOL_OPERATOR) {
     BOOL_OPERATOR[BOOL_OPERATOR["NOT_SET"] = -1] = "NOT_SET";
@@ -206,7 +207,7 @@ var Condition = (function () {
         return this;
     };
     return Condition;
-})();
+}());
 exports.Condition = Condition;
 (function (BOOLEAN_OPERATOR) {
     BOOLEAN_OPERATOR[BOOLEAN_OPERATOR["AND"] = 0] = "AND";
@@ -276,7 +277,7 @@ var ConditionTree = (function (_super) {
         }
     };
     return ConditionTree;
-})(Condition);
+}(Condition));
 exports.ConditionTree = ConditionTree;
 var ParallelConditionDescriptor = (function () {
     function ParallelConditionDescriptor(fn, condition) {
@@ -284,7 +285,7 @@ var ParallelConditionDescriptor = (function () {
         this._fn = fn;
     }
     return ParallelConditionDescriptor;
-})();
+}());
 exports.ParallelConditionDescriptor = ParallelConditionDescriptor;
 var ParallelCondition = (function (_super) {
     __extends(ParallelCondition, _super);
@@ -326,7 +327,7 @@ var ParallelCondition = (function (_super) {
         forEachP(this._iterableArray);
     };
     return ParallelCondition;
-})(ConditionTree);
+}(ConditionTree));
 exports.ParallelCondition = ParallelCondition;
 var Future = (function () {
     function Future() {
@@ -359,7 +360,7 @@ var Future = (function () {
         return this.onValueSet(callback);
     };
     return Future;
-})();
+}());
 exports.Future = Future;
 var WorkerTask = (function () {
     function WorkerTask(task, timeout) {
@@ -377,7 +378,7 @@ var WorkerTask = (function () {
         return this._future;
     };
     return WorkerTask;
-})();
+}());
 exports.WorkerTask = WorkerTask;
 var __workerIndex = 0;
 var Worker = (function () {
@@ -402,8 +403,11 @@ var Worker = (function () {
                     }
                 });
                 workerTask.getTask()(future);
+                if (timeoutId) {
+                    clearTimeout(timeoutId);
+                }
             }, 0);
-            if (timeout) {
+            if (timeout > 0) {
                 timeoutId = setTimeout(function () {
                     me._timeoutCondition.setTrue();
                     timeoutId = null;
@@ -432,7 +436,7 @@ var Worker = (function () {
         this._timeoutCondition.disable();
     };
     return Worker;
-})();
+}());
 exports.Worker = Worker;
 function __createWorkers(dispatcher, concurrency) {
     var workers = [];
@@ -564,7 +568,7 @@ var Dispatcher = (function () {
         this.__executeTask();
     };
     return Dispatcher;
-})();
+}());
 exports.Dispatcher = Dispatcher;
 function __getSequenceStackTrace(_task, auditArguments, fnIndex) {
     function __stringify(v) {
