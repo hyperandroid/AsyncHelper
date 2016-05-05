@@ -24,6 +24,7 @@ export declare class Condition {
     _timerId: number;
     constructor();
     id: string;
+    setId(id: string): this;
     __emit(): void;
     setTrue(): this;
     setFalse(): this;
@@ -50,8 +51,7 @@ export declare enum BOOLEAN_OPERATOR {
 export declare class ConditionTree extends Condition {
     _booleanOperator: BOOLEAN_OPERATOR;
     _children: Condition[];
-    constructor();
-    setBooleanOperator(op: BOOLEAN_OPERATOR): this;
+    constructor(operator?: BOOLEAN_OPERATOR);
     __isTrueOr(): BOOL_OPERATOR;
     __isTrueAnd(): BOOL_OPERATOR;
     __isTrue(): BOOL_OPERATOR;
@@ -72,25 +72,26 @@ export declare class ParallelCondition extends ConditionTree {
     __setIterableArray(array: ParallelConditionElement[]): void;
     execute(): void;
 }
-export declare type FutureCallback = (f: Future) => void;
-export declare class Future {
-    _value: any;
+export declare type FutureCallback<T> = (f: Future<T | Error>) => void;
+export declare class Future<T> {
+    _value: T;
     _valueSetCondition: Condition;
     constructor();
-    getValue(): any;
+    getValue(): T;
     isValueSet(): boolean;
     setValue(v: any): void;
-    onValueSet(callback: FutureCallback): this;
-    then(callback: FutureCallback): this;
+    onValueSet(callback: FutureCallback<T>): this;
+    then(success: (result: T | Error) => void, error: (err: Error) => void): void;
+    node(callback: (err: Error, retValue?: T) => void): void;
 }
 export declare class WorkerTask {
     _timeout: number;
-    _future: Future;
-    _task: FutureCallback;
-    constructor(task: FutureCallback, timeout: number);
-    getTask(): (f: Future) => void;
+    _future: Future<any>;
+    _task: FutureCallback<any>;
+    constructor(task: FutureCallback<any>, timeout: number);
+    getTask(): (f: Future<any>) => void;
     getTimeout(): number;
-    getFuture(): Future;
+    getFuture(): Future<any>;
 }
 export declare type WorkerCallback = (c: Condition) => void;
 export declare class Worker {
@@ -114,9 +115,10 @@ export declare class Dispatcher {
     _pendingTasks: WorkerTask[];
     _isEmptySignal: Signal;
     constructor(concurrency: number);
-    submit(_task: GenericFunction, _timeout: number): Future;
-    submitNodeSequence(__task: GenericFunction | GenericFunction[], _timeout: number, haltOnError?: boolean): Future;
-    submitCondition(_condition: ParallelCondition, _timeout: number): Future;
+    submit<T>(_task: GenericFunction, _timeout: number): Future<T | Error>;
+    waterfall<T>(__task: GenericFunction | GenericFunction[], _timeout: number, haltOnError?: boolean): Future<T | Error>;
+    submitNodeSequence<T>(__task: GenericFunction | GenericFunction[], _timeout?: number, haltOnError?: boolean): Future<T | Error>;
+    submitCondition(_condition: ParallelCondition, _timeout: number): Future<{} | Error>;
     addIsEmptyListener(l: DispatcherCallback): this;
     __executeTask(): void;
     __workerNotBusy(worker: Worker): void;

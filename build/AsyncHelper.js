@@ -94,6 +94,10 @@ var Condition = (function () {
         enumerable: true,
         configurable: true
     });
+    Condition.prototype.setId = function (id) {
+        this.id = id;
+        return this;
+    };
     Condition.prototype.__emit = function () {
         this._signalConditionStateChange.emit(this);
     };
@@ -216,15 +220,11 @@ exports.Condition = Condition;
 var BOOLEAN_OPERATOR = exports.BOOLEAN_OPERATOR;
 var ConditionTree = (function (_super) {
     __extends(ConditionTree, _super);
-    function ConditionTree() {
+    function ConditionTree(operator) {
         _super.call(this);
-        this._booleanOperator = BOOLEAN_OPERATOR.AND;
+        this._booleanOperator = typeof operator !== "undefined" ? operator : BOOLEAN_OPERATOR.AND;
         this._children = [];
     }
-    ConditionTree.prototype.setBooleanOperator = function (op) {
-        this._booleanOperator = op;
-        return this;
-    };
     ConditionTree.prototype.__isTrueOr = function () {
         var i;
         var notSet = false;
@@ -356,8 +356,27 @@ var Future = (function () {
         this._valueSetCondition.onTrue(callback.bind(null, this));
         return this;
     };
-    Future.prototype.then = function (callback) {
-        return this.onValueSet(callback);
+    Future.prototype.then = function (success, error) {
+        this.onValueSet(function (f) {
+            var v = f.getValue();
+            if (v instanceof Error) {
+                error(f.getValue());
+            }
+            else {
+                success(v);
+            }
+        });
+    };
+    Future.prototype.node = function (callback) {
+        this.onValueSet(function (f) {
+            var v = f.getValue();
+            if (v instanceof Error) {
+                callback(f.getValue());
+            }
+            else {
+                callback(undefined, v);
+            }
+        });
     };
     return Future;
 }());
@@ -465,7 +484,13 @@ var Dispatcher = (function () {
         this.__executeTask();
         return task.getFuture();
     };
+    Dispatcher.prototype.waterfall = function (__task, _timeout, haltOnError) {
+        return this.submitNodeSequence(__task, _timeout, haltOnError);
+    };
     Dispatcher.prototype.submitNodeSequence = function (__task, _timeout, haltOnError) {
+        if (typeof _timeout === 'undefined') {
+            _timeout = 0;
+        }
         if (typeof haltOnError === 'undefined') {
             haltOnError = true;
         }
@@ -513,7 +538,7 @@ var Dispatcher = (function () {
                                 future.setValue(error);
                             }
                             else {
-                                iterate(e);
+                                setImmediate(iterate, e);
                             }
                         }
                     }
@@ -548,7 +573,9 @@ var Dispatcher = (function () {
         if (this._pendingTasks.length && this._workers.length) {
             var task = this._pendingTasks.shift();
             var worker = this._workers.shift();
-            worker.run(task);
+            setTimeout(function () {
+                worker.run(task);
+            }, 0);
         }
         if (!this._pendingTasks.length) {
             this._isEmptySignal.emit(this);

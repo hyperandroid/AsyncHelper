@@ -253,6 +253,11 @@
             this._id = id;
         }
 
+        setId( id:string ) {
+            this.id = id;
+            return this;
+        }
+
         /**
          * Emit condition state change events.
          * @private
@@ -480,24 +485,13 @@
      */
     export class ConditionTree extends Condition {
 
-
         _booleanOperator:BOOLEAN_OPERATOR;
         _children:Condition[];
 
-        constructor() {
+        constructor( operator? : BOOLEAN_OPERATOR ) {
             super();
-            this._booleanOperator = BOOLEAN_OPERATOR.AND;
+            this._booleanOperator = typeof operator!=="undefined" ? operator : BOOLEAN_OPERATOR.AND;
             this._children = [];
-        }
-
-        /**
-         * Set the boolean operator that will be applied to this tree's children.
-         * @param op
-         * @return {*}
-         */
-        setBooleanOperator(op:BOOLEAN_OPERATOR) {
-            this._booleanOperator = op;
-            return this;
         }
 
         /**
@@ -642,7 +636,7 @@
                 if (typeof element === "function") {
                     condition = new Condition();
                     me.addCondition(condition);
-                    iterableArray.push(new ParallelConditionDescriptor(<ParallelConditionElementFunction>element, condition));
+                    iterableArray.push(new ParallelConditionDescriptor(element as ParallelConditionElementFunction, condition));
 
                 } else if (element instanceof ParallelCondition) {
                     condition = element;
@@ -685,7 +679,7 @@
 
     }
 
-    export type FutureCallback = (f:Future) => void;
+    export type FutureCallback<T> = (f:Future<T|Error>) => void;
 
     /**
      * Future objects are holders for values of functions not yet executed.
@@ -700,9 +694,9 @@
      * @return {*}
      * @constructor
      */
-    export class Future {
+    export class Future<T> {
 
-        _value:any;
+        _value:T;
         _valueSetCondition:Condition;
 
         constructor() {
@@ -745,7 +739,7 @@
          * @param callback {FutureCallback}
          * @return {*}
          */
-        onValueSet(callback:FutureCallback) {
+        onValueSet(callback:FutureCallback<T>) {
 
             const me = this;
 
@@ -759,8 +753,26 @@
             return this;
         }
 
-        then(callback:FutureCallback) {
-            return this.onValueSet(callback);
+        then( success : (result:T|Error)=>void, error : (err:Error)=>void ) {
+            this.onValueSet( (f:Future<T|Error>) => {
+                const v = f.getValue() as T;
+                if ( v instanceof Error ) {
+                    error( f.getValue() as Error );
+                } else {
+                    success( v );
+                }
+            });
+        }
+
+        node( callback : (err:Error, retValue?:T)=>void ) {
+            this.onValueSet( (f:Future<T|Error>) => {
+                const v = f.getValue() as T;
+                if ( v instanceof Error ) {
+                    callback( f.getValue() as Error );
+                } else {
+                    callback( undefined, v );
+                }
+            });
         }
     }
 
@@ -787,10 +799,10 @@
     export class WorkerTask {
 
         _timeout:number;
-        _future:Future;
-        _task:FutureCallback;
+        _future:Future<any>;
+        _task:FutureCallback<any>;
 
-        constructor(task:FutureCallback, timeout:number) {
+        constructor(task:FutureCallback<any>, timeout:number) {
             this._timeout = timeout;
             this._future = new Future();
             this._task = task;
@@ -846,7 +858,7 @@
             this._workingCondition.setTrue();
 
             // schedule
-            (function (me:Worker, future:Future, timeout:number) {
+            (function (me:Worker, future:Future<any>, timeout:number) {
 
                 var timeoutId:number = null;
 
@@ -1005,7 +1017,8 @@
          * @param _timeout {number=} millisecond to consider this task timed out.
          * @return {Future}
          */
-        submit(_task:GenericFunction, _timeout:number):Future {
+        submit<T>(_task:GenericFunction, _timeout:number):Future<T|Error> {
+
 
             var task = new WorkerTask(_task, _timeout);
             this._pendingTasks.push(task);
@@ -1014,7 +1027,15 @@
             return task.getFuture();
         }
 
-        submitNodeSequence(__task:GenericFunction | GenericFunction[], _timeout:number, haltOnError?:boolean):Future {
+        waterfall<T>(__task:GenericFunction | GenericFunction[], _timeout:number, haltOnError?:boolean):Future<T|Error> {
+            return this.submitNodeSequence<T>( __task, _timeout, haltOnError );
+        }
+
+        submitNodeSequence<T>(__task:GenericFunction | GenericFunction[], _timeout?:number, haltOnError?:boolean):Future<T|Error> {
+
+            if ( typeof _timeout === 'undefined' ) {
+                _timeout= 0;
+            }
 
             if (typeof haltOnError === 'undefined') {
                 haltOnError = true;
@@ -1024,7 +1045,7 @@
 
             if (Object.prototype.toString.call(__task) === '[object Array]') {
 
-                var _task = <FutureCallback[]>__task;
+                var _task = <FutureCallback<T>[]>__task;
 
                 // trivial.
                 // an empty array has been set.
@@ -1073,7 +1094,7 @@
                                     (<any>error).sequenceStacktrace = __getSequenceStackTrace(_task, auditArguments, fnIndex);
                                     future.setValue(error);
                                 } else {
-                                    iterate(e);
+                                    setImmediate( iterate, e );
                                 }
                             }
 
@@ -1084,10 +1105,10 @@
                     }
                 }
             } else {
-                task = <FutureCallback>__task;
+                task = <FutureCallback<T>>__task;
             }
 
-            return this.submit(task, _timeout);
+            return this.submit<T>(task, _timeout);
         }
 
         submitCondition(_condition:ParallelCondition, _timeout:number) {
@@ -1131,7 +1152,10 @@
             if (this._pendingTasks.length && this._workers.length) {
                 var task = this._pendingTasks.shift();
                 var worker = this._workers.shift();
-                worker.run(task);
+
+                setTimeout( function() {
+                    worker.run(task);
+                }, 0 );
             }
 
             if (!this._pendingTasks.length) {
@@ -1174,7 +1198,7 @@
      *
      * @return {string}
      */
-    function __getSequenceStackTrace(_task:FutureCallback[], auditArguments:AuditArgument[], fnIndex:number) {
+    function __getSequenceStackTrace<T>(_task:FutureCallback<T>[], auditArguments:AuditArgument[], fnIndex:number) {
 
         function __stringify(v:any) {
             try {
