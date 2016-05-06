@@ -1,3 +1,35 @@
+
+`npm install asynchelper`
+
+While writing nodejs code, it is not uncommon to have to do something like this:
+ 
+ * get database connection
+ * count records for user
+ * if count is 0, insert record for user
+ * create user game descriptor
+ * return JSON with user data
+ 
+which translated into plain node code, is a callback nightmare.
+Not to mention error control flow.
+Not to mention timeout constraints (you really don't want this to take more than 200 milliseconds)
+
+...
+
+Another use case would be:
+
+ * get facebook credentials
+ * make a post to your REST
+ * make a get to another REST
+ * increment REDIS for API call track
+ 
+which if you need to know when all this has been done, successfully or not, is a nightmare.
+And to be able to have all this executed at the same time under control
+Again, not to mention error control flow.
+Again, not to mention timeout constraints (you really don't want this to take more than 2000 milliseconds)
+
+And how about having both use cases running at the same time.
+And how about not having more than 4 of these (remember, scarce database connection number ?) running at the same time
+
 # AsyncHelper
 
 AsyncHelper is a general purpose library to handle asynchronous processing in nodejs.
@@ -417,7 +449,7 @@ A real use case for this object is:
 
 
 ```typescript
-// Wait for **all** these things to happen, with a 3 seconds limit.
+// Wait for **all** these things to happen, with a 3 second limit.
 
 function do_postgres_stuff( _condition:Condition, index:number ) {
 
