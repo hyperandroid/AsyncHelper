@@ -10,7 +10,9 @@ While writing nodejs code, it is not uncommon to have to do something like this:
  * return JSON with user data
  
 which translated into plain node code, is a callback nightmare.
+
 Not to mention error control flow.
+
 Not to mention timeout constraints (you really don't want this to take more than 200 milliseconds)
 
 ...
@@ -23,21 +25,25 @@ Another use case would be:
  * increment REDIS for API call track
  
 which if you need to know when all this has been done, successfully or not, is a nightmare.
+
 And to be able to have all this executed at the same time under control
+
 Again, not to mention error control flow.
+
 Again, not to mention timeout constraints (you really don't want this to take more than 2000 milliseconds)
 
-And how about having both use cases running at the same time.
-And how about not having more than 4 of these (remember, scarce database connection number ?) running at the same time
+And then:
+* how about having both use cases running at the same time ?
+* how about not having more than 4 of these (remember, scarce database connection number ?) running at the same time ?
 
 # AsyncHelper
 
 AsyncHelper is a general purpose library to handle asynchronous processing in nodejs.
-The system works with Future objects as the base for message passing and synchronization.
 
 The goal is to expose a clean interface, not only for code readability, but to keep under control all the
- asynchronous operations that could eventually span in the lifecycle of a node js application. The library
- relies on the concept of a `Condition` for signaling asynchronous code activity and a `Future` returned 
+  synchronous operations that could eventually span in the lifecycle of a node js application, and to keep scarce resources under fine control.
+ 
+ The library relies on the concept of a `Condition` for signaling asynchronous code activity and a `Future` returned 
  to the developer, so she can be notified about computation results. 
  
 The `Condition` allows to choreograph complex operations and have a fast short-circuit mechanism to allow your
