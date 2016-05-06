@@ -11,7 +11,7 @@
     "promise"
   ],
   "author": "ibon tolosana <hyperandroid@gmail.com>",
-  "description": "AsyncHelper is a general purpose library to work with asynchronous code in node js.",
+  "description": "AsyncHelper is a general purpose library to work with asynchronous code in node js. Has timeout and pass-through error control over function waterfalls, parallel condition execution flow, fine-grained control for scarce resources, etc.",
   "repository": {
     "type": "git",
     "url": "git://github.com/hyperandroid/AsyncHelper.git"

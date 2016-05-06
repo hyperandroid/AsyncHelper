@@ -5,46 +5,55 @@ The system works with Future objects as the base for message passing and synchro
 
 The goal is to expose a clean interface, not only for code readability, but to keep under control all the
  asynchronous operations that could eventually span in the lifecycle of a node js application. The library
- relies on the concept of a `Condition` for signaling asynchronous code activity and a `Future` to be notified
- about computation results. 
+ relies on the concept of a `Condition` for signaling asynchronous code activity and a `Future` returned 
+ to the developer, so she can be notified about computation results. 
  
 The `Condition` allows to choreograph complex operations and have a fast short-circuit mechanism to allow your
-code to progress whenever the conditions are not met. 
+code to progress whenever the conditions are met or not. A `Condition` is hence a super-powered boolean events broadcaster. 
 
-All operations in AsyncHelper can have a timeout value, so Conditions can fail-fast if the time constraints are not met. 
+Conditions are defined to fail-fast because it met its criteria, or because of built-in timeout control. 
  
 ## Dispatching asynchronous code
  
 The main object to interact with is a `Dispatcher` object.
 
-As much as needed `Dispatcher` objects can be created, so that one could be used to interact with Redis, and another
-one with Postgres. The creation of a `Dispatcher`, instead of relying on calling `AsyncHelper.waterfall( [], callback )`
- is for concurrency purposes. A dispatcher can set a maximum number of concurrent operations, so that you can keep
- under fine control the scarce resources of your application, like for example, database connections. A dispatcher is
- hence a kind of `Queue` object, served as a first-in first-out, with interesting control flow capabilities.
+Since sometimes is important to handle different scarce resources at a time, as much as needed `Dispatcher` objects 
+can be created. It makes sense to interact with different pieces of software separately like dealing with your database
+or an exposed REST API.
+ 
+The creation of a `Dispatcher`, relies on objects instead of calling `AsyncHelper.waterfall( [], callback )` for well
+reasons:
+ 
+* concurrency purposes. A dispatcher can set a maximum number of concurrent operations, so that you can keep
+ under fine control the scarce resources of your application, like for example, database connections.
+* keep track of running operations, and pending running operations.
+
+A dispatcher is hence a `Queue`, served as a first-in first-out, with interesting control flow capabilities.
+How you get notified about dispatched tasks status is by means of `Future objects`.
   
 ### Future objects  
   
-For each element submitted to the `Dispatcher` for execution, a `Future` object will be returned in exchange.
-Why a `Future` instead of a callback is because the `Future` offers a more formal and complete notification scheme:
+For each element submitted for execution to a `Dispatcher`, a `Future` object will be returned in exchange.
+A `Future` object offers a more formal and complete notification scheme than a callback:
  
 * a future can be checked for its value. Either not set (still pending execution), and if set, whether is an Error.
 * multiple observers can be listening to the future's value change.
 * it is latched by a `Condition`, so its value can only be set once. And the future's observers will only be notified once.
 
-Future objects expose three different callback notification mechanisms:
+```typescript
+    const future = _dispatcher.waterfall( [...] );
+```
+
+Future objects expose three different callback notification mechanisms (in fact they are the same, but with some sugar icing):
 
 #### onValueSet
 
 ```typescript
-
-    const future = new Future<number>();
     
     future.onValueset( (f:Future<number>) => {
         // check future's value.
         // it will be either a number or Error. 
     });
-
 ```
 
 #### then
@@ -53,16 +62,7 @@ Promisify a future object:
 
 ```typescript
     
-    const future = _dispatcher.waterfall<number>(
-        [
-            function f1() {},
-            function f2() {},
-            function f3() {},
-            ...
-        ],
-        0,  // no timeout
-        true 
-    ).then(
+    future.then(
         (v:number) => {
             // waterfall returned v
         },
@@ -77,26 +77,24 @@ Promisify a future object:
 notify on a nodejs standard callback:
 
 ```typescript
-    const future = _dispatcher.waterfall<number>(
-        [
-            function f1() {},
-            function f2() {},
-            function f3() {},
-            ...
-        ],
-        0,  // no timeout
-        true 
-    ).node(
+
+    future.node(
         (err:Error, v:number) => {
             // waterfall returned v or Error
         }
     );
 ```
 
+But what can be actually be submitted to a `Dispatcher`.
+There are three operations a Dispatcher can execute: 
+* `waterfall` of nodejs-style functions. 
+* `ParallelCondition` objects.
+* arbitrary functions with time control.
+
 ### submitNodeSequence/waterfall
 
-`waterfalling` is the most common scenario for the AsyncHelper.
-It allows to have fine timing control for the whole function sequence, and error control, so a thrown Error in
+`waterfall`-ing is the most common scenario for the AsyncHelper.
+It allows to have fine timing control for the whole function waterfall, and pass-through error control. A thrown Error in
 any of the functions can be catch and propagated to the `Future` as an error value.
 
 **Bonus points**: if an Error is thrown, you can get a detailed string representation of the waterfall status at the
@@ -129,11 +127,12 @@ object.
 #### waterfall function gotchas
 
 * Functions must comply with nodejs's callback convention: (e:Error, args:any).
-* Functions return value will be propagated to the next function. If not next function exists, the value
+* Functions return value will be propagated to the next function. The latest waterfall function return value 
 will be propagated as the `Future` object's value.
 * Functions **can't be fat arrow** functions. Internally, the `Dispatcher` sets **this** as the waterfall
 control function itself, otherwise, it won't be able to propagate returned values from function to function.
-* Functions can be set as another function's callback
+* Functions **must return a value**. If no the function has no return value it is expected that the next waterfall 
+function will be invoked as a callback from something invoked in the current waterfall's function.
 * You can set properties on **this**. The execution context will be a per-waterfall submission function which
 handles the control flow.
 
@@ -149,18 +148,17 @@ With all this, a real life use case for the waterfall could be:
             },
             function (err:Error, client:pg.Client, done:()=>void) {
                 if (DU.HandleError(err, client, done)) {
-                
                     // stop waterfall, and propagate error to the Future value.
                     throw err;
                 }
 
-                // pass postgress specific objects to next waterfal functions 
+                // pass postgres specific objects to next waterfall functions 
                 this.props = {
                     client : client,
                     done   : done
                 };
 
-                client.query(
+                this.props.client.query(
                     "update client_created_games " +
                     "set" +
                     " context= $1," +
@@ -207,8 +205,8 @@ With all this, a real life use case for the waterfall could be:
                 }
             }
         ],
-        1000,   // take a second as much to execute waterfall functions.
-        true
+        1000,   // take a second as much to execute waterfall functions. 0 for no timeout. optional
+        true    // error pass-through enabled ?
     ).onValueSet(
     
         // check future.getValue() for an error.
@@ -216,21 +214,56 @@ With all this, a real life use case for the waterfall could be:
     );
 ```
 
-### submitCondition
+### submitCondition (ParallelCondition)
 
-tbd
+A `ParallelCondition` can be scheduled for execution. The future's value will be a boolean, indicating `Condition` met
+or not.
+Remember, the `Condition` might have short-circuited early, and does not mean all `Condition` operations are done, only
+the `Condition` value has been set.
+
+```typescript
+
+    const pc = new ParallelCondition( ... );
+    
+    _dispatcher.submitCondition( pc ).then(
+        (condition_result:boolean) => {
+            // the condition result was successful or not 
+        },
+        (err:Error) => {
+            // an error ocurred
+        }
+    );
+
+```
 
 ### submit
 
 This `Dispatcher` function submits an arbitrary function for execution. It also exposes timeout control.
+Since a dispatcher does not have any knowledge of the execution context, the function has to be bound with its parameters.
  
-tbd
+```typescript
+
+    _dispatcher.submit( 
+        function() {
+        },
+        0   // no timeout
+    );
+    
+    
+    function fn( a,b,c ) {
+        ...
+    }
+
+    // execute fn with a maximum time of 100 milliseconds.
+    _dispatcher.submit( fn.bind(null,3,4,5), 100 );
+```
 
 ## Signaling Dispatcher activity
  
- addIsEmptyListener
+The method `Dispatcher.addIsEmptyListener( (d:Dispatcher)=>void )` will be invoked whenever a dispatcher has drained
+all its scheduled tasks.
 
-# Exposes Objects
+# Exposed Objects
 
 Though the most interesting object in AsyncHelper is the `Dispatcher`, it exposes some really useful objects as well.
 

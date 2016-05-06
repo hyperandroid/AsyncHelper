@@ -1,20 +1,5 @@
 /**
  * (c) 2013-2016 Ibon Tolosana.
- */
-
-
-/**
- * Untangle: untangle the callback nightmare with stateful objects and asynchronous functionality.
- * Objects available:
- *
- *  Signal
- *  Condition
- *  ConditionTree
- *  ParallelCondition
- *  Future
- *  WorkerTask
- *  Worker
- *  Dispatcher
  *
  * @see license.txt file
  *
@@ -1158,7 +1143,7 @@
                 }, 0 );
             }
 
-            if (!this._pendingTasks.length) {
+            if (!this._pendingTasks.length && this._workers.length===this._concurrency) {
                 this._isEmptySignal.emit(this);
             }
         }

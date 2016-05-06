@@ -577,7 +577,7 @@ var Dispatcher = (function () {
                 worker.run(task);
             }, 0);
         }
-        if (!this._pendingTasks.length) {
+        if (!this._pendingTasks.length && this._workers.length === this._concurrency) {
             this._isEmptySignal.emit(this);
         }
     };
