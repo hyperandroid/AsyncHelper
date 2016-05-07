@@ -8,14 +8,6 @@ While writing nodejs code, it is not uncommon to have to do something like this:
  * if count is 0, insert record for user
  * create user game descriptor
  * return JSON with user data
- 
-which translated into plain node code, is a callback nightmare.
-
-Not to mention error control flow.
-
-Not to mention timeout constraints (you really don't want this to take more than 200 milliseconds)
-
-...
 
 Another use case would be:
 
@@ -24,17 +16,17 @@ Another use case would be:
  * make a get to another REST
  * increment REDIS for API call track
  
-which if you need to know when all this has been done, successfully or not, is a nightmare.
+these use cases translated into plain node code, are a callback nightmare.
 
-And to be able to have all this executed at the same time under control
+Not to mention error control flow.
 
-Again, not to mention error control flow.
+Not to mention timeout constraints (you really don't want this to take more than 200 milliseconds)
 
-Again, not to mention timeout constraints (you really don't want this to take more than 2000 milliseconds)
+What if you need to know when all this code ends execution.
 
 And then:
 * how about having both use cases running at the same time ?
-* how about not having more than 4 of these (remember, scarce database connection number ?) running at the same time ?
+* how about not having more than 4 of these (remember scarce database connection number ?) running at the same time ?
 
 # AsyncHelper
 
