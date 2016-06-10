@@ -13,12 +13,10 @@ function schedule(f, delay) {
     }
 }
 function forEachP(arr) {
-    arr.forEach(function (i) {
-        schedule((function (elem, index) {
-            return function () {
-                elem._fn(elem._condition, index);
-            };
-        })(arr[i], i), 0);
+    arr.forEach(function (elem, index) {
+        schedule(function () {
+            elem._fn(elem._condition, index);
+        });
     });
 }
 var Signal = (function () {

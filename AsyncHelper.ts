@@ -25,14 +25,11 @@
      * Do not use directly, it is used internally by the library.
      */
     function forEachP(arr:ParallelConditionDescriptor[]) {
-        arr.forEach(function (i:any) {
+        arr.forEach(function (elem:ParallelConditionDescriptor,index:number) {
             schedule(
-                (function (elem:ParallelConditionDescriptor, index:number/*,array*/) {
-                    return function () {
-                        elem._fn(elem._condition, index);
-                    }
-                })(arr[i], i),
-                0
+                function () {
+                    elem._fn(elem._condition, index);
+                }
             );
         });
     }
