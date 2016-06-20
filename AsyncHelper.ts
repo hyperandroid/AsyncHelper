@@ -856,10 +856,6 @@
 
                     workerTask.getTask()(future);
 
-                    if ( timeoutId ) {
-                        clearTimeout( timeoutId );
-                    }
-
                 }, 0);
 
                 if (timeout>0) {

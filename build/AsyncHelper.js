@@ -420,9 +420,6 @@ var Worker = (function () {
                     }
                 });
                 workerTask.getTask()(future);
-                if (timeoutId) {
-                    clearTimeout(timeoutId);
-                }
             }, 0);
             if (timeout > 0) {
                 timeoutId = setTimeout(function () {
