@@ -825,8 +825,8 @@
         _timeoutCondition:Condition;
         _currentWorkerTask:WorkerTask;
 
-        constructor() {
-            this._id = "worker" + __workerIndex++;
+        constructor(name_prefix:string) {
+            this._id = name_prefix + __workerIndex++;
             this._workingCondition = new Condition();
             this._timeoutCondition = new Condition();
             this._currentWorkerTask = null;
@@ -912,6 +912,7 @@
          */
         kill() {
             console.warn(`Worker '${this._id}' timeout. Future value as Error.`);
+            console.error(`  Task was: '${this._currentWorkerTask.getTask().toString()}'`);
             this._currentWorkerTask.getFuture().setValue(new Error("Worker '" + this._id + "' Timeout"));
             this._workingCondition.disable();
             this._timeoutCondition.disable();
@@ -925,7 +926,7 @@
      *
      * @private
      */
-    function __createWorkers(dispatcher:Dispatcher, concurrency:number) {
+    function __createWorkers(dispatcher:Dispatcher, concurrency:number, prefix:string) {
         const workers:Worker[] = [];
         for (let i = 0; i < concurrency; i++) {
             var worker:Worker = __createWorker(dispatcher);
@@ -941,7 +942,7 @@
      * @private
      */
     function __createWorker(dispatcher:Dispatcher):Worker {
-        var worker = new Worker();
+        var worker = new Worker(dispatcher._workerPrefix);
         worker.onWorkDone(dispatcher.__workerNotBusy.bind(dispatcher, worker));
         worker.onTimeout(dispatcher.__workerTimedOut.bind(dispatcher, worker));
 
@@ -949,6 +950,7 @@
     }
 
     export type GenericFunction = (...args:any[])=>any;
+    export type FutureFunction<T> = (f:Future<T>)=>any;
     export type DispatcherCallback = (d:Dispatcher)=>void;
 
     interface AuditArgument {
@@ -978,15 +980,32 @@
         _workers:Worker[];
         _pendingTasks:WorkerTask[];
         _isEmptySignal:Signal;
+        _stallingSignal:Signal;
+        _workerPrefix = 'Worker';
 
-        constructor(concurrency:number) {
+        constructor(concurrency:number, prefix?:string) {
 
             this._concurrency = concurrency || 1;
-            this._workers = __createWorkers(this, this._concurrency);
+            if ( typeof prefix!=='undefined' ) {
+                this._workerPrefix= prefix;
+            }
+            this._workers = __createWorkers(this, this._concurrency, this._workerPrefix);
             this._pendingTasks = [];
             this._isEmptySignal = new Signal();
+            this._stallingSignal= new Signal();
         }
 
+        onEmpty( f: SignalObserver ) {
+            this._isEmptySignal.addListener(f);
+        }
+
+        onStall( f:SignalObserver ) {
+            this._stallingSignal.addListener(f);
+        }
+
+        getPendingTasksLength() {
+            return this._pendingTasks.length;
+        }
 
         /**
          * Submit a task for asynchronous execution.
@@ -995,7 +1014,7 @@
          * @param _timeout {number=} millisecond to consider this task timed out.
          * @return {Future}
          */
-        submit<T>(_task:GenericFunction, _timeout:number):Future<T|Error> {
+        submit<T>(_task:FutureFunction<T>, _timeout:number):Future<T|Error> {
 
 
             var task = new WorkerTask(_task, _timeout);
@@ -1091,16 +1110,21 @@
 
         submitCondition(_condition:ParallelCondition, _timeout:number) {
             if (!(_condition instanceof ParallelCondition)) {
+                console.error('submit condition requires ParallelCondition.');
                 return;
             }
 
             return this.submit(function (future) {
 
                     _condition.onTrue(function () {
-                        future.setValue(true);
+                        setImmediate( function() {
+                            future.setValue(true);
+                        })
                     });
                     _condition.onFalse(function () {
-                        future.setValue(true);
+                        setImmediate( function() {
+                            future.setValue(true);
+                        })
                     });
 
                     _condition.execute();
@@ -1136,7 +1160,9 @@
                 }, 0 );
             }
 
-            if (!this._pendingTasks.length && this._workers.length===this._concurrency) {
+            if ( this._workers.length===0 ) {
+                this._stallingSignal.emit(this);
+            } else if (!this._pendingTasks.length && this._workers.length===this._concurrency) {
                 this._isEmptySignal.emit(this);
             }
         }
