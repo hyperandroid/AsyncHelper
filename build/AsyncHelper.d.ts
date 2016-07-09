@@ -99,7 +99,7 @@ export declare class Worker {
     _workingCondition: Condition;
     _timeoutCondition: Condition;
     _currentWorkerTask: WorkerTask;
-    constructor();
+    constructor(name_prefix: string);
     run(workerTask: WorkerTask): void;
     isWorking(): boolean;
     isTimedOut(): boolean;
@@ -108,14 +108,20 @@ export declare class Worker {
     kill(): void;
 }
 export declare type GenericFunction = (...args: any[]) => any;
+export declare type FutureFunction<T> = (f: Future<T>) => any;
 export declare type DispatcherCallback = (d: Dispatcher) => void;
 export declare class Dispatcher {
     _concurrency: number;
     _workers: Worker[];
     _pendingTasks: WorkerTask[];
     _isEmptySignal: Signal;
-    constructor(concurrency: number);
-    submit<T>(_task: GenericFunction, _timeout: number): Future<T | Error>;
+    _stallingSignal: Signal;
+    _workerPrefix: string;
+    constructor(concurrency: number, prefix?: string);
+    onEmpty(f: SignalObserver): void;
+    onStall(f: SignalObserver): void;
+    getPendingTasksLength(): number;
+    submit<T>(_task: FutureFunction<T>, _timeout: number): Future<T | Error>;
     waterfall<T>(__task: GenericFunction | GenericFunction[], _timeout: number, haltOnError?: boolean): Future<T | Error>;
     submitNodeSequence<T>(__task: GenericFunction | GenericFunction[], _timeout?: number, haltOnError?: boolean): Future<T | Error>;
     submitCondition(_condition: ParallelCondition, _timeout: number): Future<{} | Error>;

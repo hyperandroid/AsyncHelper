@@ -1,6 +1,6 @@
 {
   "name": "asynchelper",
-  "version": "0.7.3",
+  "version": "0.7.4",
   "main": "./build/AsyncHelper.js",
   "keywords": [
     "nodejs",
